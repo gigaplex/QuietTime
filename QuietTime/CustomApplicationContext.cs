@@ -10,9 +10,13 @@ namespace QuietTime
 {
     class CustomApplicationContext : ApplicationContext
     {
+        private const int TimerInterval = 5000;
+
         private NotifyIcon notifyIcon;
         private SettingsForm settingsForm;
         private VolumeHandler volumeHandler = new VolumeHandler();
+        private System.Timers.Timer timer;
+        private Control synchronisingControl;
 
         public CustomApplicationContext()
         {
@@ -24,21 +28,38 @@ namespace QuietTime
                 Visible = true
             };
 
-            var defaultItem = notifyIcon.ContextMenuStrip.Items.Add("Open &Settings", null, ContextMenu_OnSettings);
-            notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
-            notifyIcon.ContextMenuStrip.Items.Add("&Mute", null, ContextMenu_Mute);
-            notifyIcon.ContextMenuStrip.Items.Add("&Unmute", null, ContextMenu_Unmute);
-            notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
+            //var defaultItem = notifyIcon.ContextMenuStrip.Items.Add("Open &Settings", null, ContextMenu_OnSettings);
+            //notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
             notifyIcon.ContextMenuStrip.Items.Add("&Exit", null, ContextMenu_OnExit);
 
-            defaultItem.Font = new Font(defaultItem.Font, defaultItem.Font.Style | FontStyle.Bold);
+            //defaultItem.Font = new Font(defaultItem.Font, defaultItem.Font.Style | FontStyle.Bold);
 
             notifyIcon.MouseDoubleClick += NotifyIcon_MouseDoubleClick;
+
+            // Create an invisible control to use as the synchronising object, since the COM components behind VolumeHandler need to be called from the same thread
+            synchronisingControl = new Control();
+            synchronisingControl.CreateControl();
+
+            timer = new System.Timers.Timer(TimerInterval)
+            {
+                Enabled = true,
+                SynchronizingObject = synchronisingControl
+            };
+            timer.Elapsed += Timer_Elapsed;
+            timer.Start();
+        }
+
+        private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            volumeHandler.Mute = QuietTimeHandler.IsQuietTime(DateTime.Now);
         }
 
         protected override void ExitThreadCore()
         {
-            notifyIcon.Visible = false;
+            timer?.Stop();
+            settingsForm?.Close();
+            if (notifyIcon != null)
+                notifyIcon.Visible = false;
             base.ExitThreadCore();
         }
 
@@ -46,11 +67,17 @@ namespace QuietTime
         {
             if (disposing)
             {
-                if (volumeHandler != null)
-                {
-                    volumeHandler.Dispose();
-                    volumeHandler = null;
-                }
+                notifyIcon?.Dispose();
+                notifyIcon = null;
+
+                settingsForm?.Dispose();
+                settingsForm = null;
+
+                volumeHandler?.Dispose();
+                volumeHandler = null;
+
+                timer?.Dispose();
+                timer = null;
             }
 
             base.Dispose(disposing);
@@ -73,16 +100,6 @@ namespace QuietTime
         private void ContextMenu_OnSettings(object sender, EventArgs e)
         {
             ShowSettingsForm();
-        }
-
-        private void ContextMenu_Mute(object sender, EventArgs e)
-        {
-            volumeHandler.Mute();
-        }
-
-        private void ContextMenu_Unmute(object sender, EventArgs e)
-        {
-            volumeHandler.Unmute();
         }
 
         private void ContextMenu_OnExit(object sender, EventArgs e)

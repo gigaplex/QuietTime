@@ -19,15 +19,21 @@ namespace QuietTime
             }
         }
 
-        public void Mute()
+        public bool Mute
         {
-            audioDevice.AudioEndpointVolume.Mute = true;
+            set {
+                if (value != audioDevice.AudioEndpointVolume.Mute)
+                {
+                    System.Diagnostics.Debug.WriteLine(string.Format("Setting mute state to {0}", value));
+                    audioDevice.AudioEndpointVolume.Mute = value;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine(string.Format("Mute state is already {0}", value));
+                }
+            }
         }
 
-        public void Unmute()
-        {
-            audioDevice.AudioEndpointVolume.Mute = false;
-        }
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
