@@ -28,11 +28,11 @@ namespace QuietTime
                 Visible = true
             };
 
-            //var defaultItem = notifyIcon.ContextMenuStrip.Items.Add("Open &Settings", null, ContextMenu_OnSettings);
-            //notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
+            var defaultItem = notifyIcon.ContextMenuStrip.Items.Add("Open &Settings", null, ContextMenu_OnSettings);
+            notifyIcon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
             notifyIcon.ContextMenuStrip.Items.Add("&Exit", null, ContextMenu_OnExit);
 
-            //defaultItem.Font = new Font(defaultItem.Font, defaultItem.Font.Style | FontStyle.Bold);
+            defaultItem.Font = new Font(defaultItem.Font, defaultItem.Font.Style | FontStyle.Bold);
 
             notifyIcon.MouseDoubleClick += NotifyIcon_MouseDoubleClick;
 
