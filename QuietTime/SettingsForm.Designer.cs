@@ -13,9 +13,13 @@
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                appContext.PausedStateChanged -= AppContext_PausedStateChanged;
+                if (components != null)
+                {
+                    components.Dispose();
+                }
             }
             base.Dispose(disposing);
         }
@@ -32,6 +36,8 @@
             this.checkAutoStart = new System.Windows.Forms.CheckBox();
             this.cancelButton = new System.Windows.Forms.Button();
             this.okButton = new System.Windows.Forms.Button();
+            this.pauseButton = new System.Windows.Forms.Button();
+            this.pauseLabel = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // checkAutoStart
@@ -56,12 +62,26 @@
             this.okButton.UseVisualStyleBackColor = true;
             this.okButton.Click += new System.EventHandler(this.okButton_Click);
             // 
+            // pauseButton
+            // 
+            resources.ApplyResources(this.pauseButton, "pauseButton");
+            this.pauseButton.Name = "pauseButton";
+            this.pauseButton.UseVisualStyleBackColor = true;
+            this.pauseButton.Click += new System.EventHandler(this.pauseButton_Click);
+            // 
+            // pauseLabel
+            // 
+            resources.ApplyResources(this.pauseLabel, "pauseLabel");
+            this.pauseLabel.Name = "pauseLabel";
+            // 
             // SettingsForm
             // 
             this.AcceptButton = this.okButton;
             resources.ApplyResources(this, "$this");
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.cancelButton;
+            this.Controls.Add(this.pauseLabel);
+            this.Controls.Add(this.pauseButton);
             this.Controls.Add(this.okButton);
             this.Controls.Add(this.cancelButton);
             this.Controls.Add(this.checkAutoStart);
@@ -76,6 +96,8 @@
         private System.Windows.Forms.CheckBox checkAutoStart;
         private System.Windows.Forms.Button cancelButton;
         private System.Windows.Forms.Button okButton;
+        private System.Windows.Forms.Button pauseButton;
+        private System.Windows.Forms.Label pauseLabel;
     }
 }
 

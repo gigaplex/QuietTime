@@ -8,15 +8,65 @@ using System.Windows.Forms;
 
 namespace QuietTime
 {
-    class CustomApplicationContext : ApplicationContext
+    public class CustomApplicationContext : ApplicationContext
     {
-        private const int TimerInterval = 5000;
+        private const int VolumeTimerInterval = 5000; // 5 seconds
+        private const int ResumeTimerInterval = 5 * 60 * 60 * 1000; // 5 hours
 
         private NotifyIcon notifyIcon;
         private SettingsForm settingsForm;
         private VolumeHandler volumeHandler = new VolumeHandler();
-        private System.Timers.Timer timer;
+        private System.Timers.Timer volumeTimer;
+        private System.Timers.Timer resumeTimer;
         private Control synchronisingControl;
+
+        private bool m_paused = false;
+        public bool Paused {
+            get
+            {
+                return m_paused;
+            }
+            set
+            {
+                if (m_paused != value)
+                {
+                    m_paused = value;
+                    var volumeTimer = this.volumeTimer;
+                    if (volumeTimer != null)
+                    {
+                        if (value)
+                            volumeTimer.Stop();
+                        else
+                            volumeTimer.Start();
+                    }
+
+                    var resumeTimer = this.resumeTimer;
+                    if (resumeTimer != null)
+                    {
+                        if (value)
+                            resumeTimer.Start();
+                        else
+                            resumeTimer.Stop();
+                    }
+
+                    PausedStateChanged?.Invoke(this, new PausedEventArgs(value));
+                }
+            }
+        }
+
+        public class PausedEventArgs : EventArgs
+        {
+            public bool NewPauseState { get; private set; }
+
+            public PausedEventArgs(bool newPauseState)
+            {
+                NewPauseState = newPauseState;
+            }
+        }
+
+        public delegate void PausedStateChangedEventHandler(object source, PausedEventArgs eventArgs);
+
+        public event PausedStateChangedEventHandler PausedStateChanged;
 
         public CustomApplicationContext()
         {
@@ -40,23 +90,37 @@ namespace QuietTime
             synchronisingControl = new Control();
             synchronisingControl.CreateControl();
 
-            timer = new System.Timers.Timer(TimerInterval)
+            volumeTimer = new System.Timers.Timer(VolumeTimerInterval)
             {
                 Enabled = true,
                 SynchronizingObject = synchronisingControl
             };
-            timer.Elapsed += Timer_Elapsed;
-            timer.Start();
+            volumeTimer.Elapsed += VolumeTimer_Elapsed;
+            volumeTimer.Start();
+
+            resumeTimer = new System.Timers.Timer(ResumeTimerInterval)
+            {
+                Enabled = true,
+                SynchronizingObject = synchronisingControl
+            };
+            resumeTimer.Elapsed += ResumeTimer_Elapsed;
+            resumeTimer.AutoReset = false;
         }
 
-        private void Timer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        private void VolumeTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
             volumeHandler.Mute = QuietTimeHandler.IsQuietTime(DateTime.Now);
         }
 
+        private void ResumeTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            Paused = false;
+        }
+
         protected override void ExitThreadCore()
         {
-            timer?.Stop();
+            volumeTimer?.Stop();
+            resumeTimer?.Stop();
             settingsForm?.Close();
             if (notifyIcon != null)
                 notifyIcon.Visible = false;
@@ -76,8 +140,11 @@ namespace QuietTime
                 volumeHandler?.Dispose();
                 volumeHandler = null;
 
-                timer?.Dispose();
-                timer = null;
+                volumeTimer?.Dispose();
+                volumeTimer = null;
+
+                resumeTimer?.Dispose();
+                resumeTimer = null;
             }
 
             base.Dispose(disposing);
@@ -87,7 +154,7 @@ namespace QuietTime
         {
             if (settingsForm == null)
             {
-                settingsForm = new SettingsForm();
+                settingsForm = new SettingsForm(this);
                 settingsForm.Closed += SettingsForm_Closed;
                 settingsForm.Show();
             }
